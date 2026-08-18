@@ -1,51 +1,61 @@
-"use client";
+import { NextRequest, NextResponse } from "next/server";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+export async function POST(request: NextRequest) {
+  try {
+      const body = await request.json();
 
-export default function LoginPage() {
-  const router = useRouter();
-    const [email, setEmail] = useState<string>("");
-      const [password, setPassword] = useState<string>("");
-        const [loading, setLoading] = useState<boolean>(false);
-          const [error, setError] = useState<string>("");
+          const username = String(body.username || "").trim();
+              const password = String(body.password || "");
 
-            const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-                e.preventDefault(); 
-                    setLoading(true);
-                        setError("");
+                  if (!username || !password) {
+                        return NextResponse.json(
+                                {
+                                          success: false,
+                                                    message: "Username and password are required.",
+                                                            },
+                                                                    { status: 400 }
+                                                                          );
+                                                                              }
 
-                            try {
-                                  const res = await fetch("/api/login", {
-                                          method: "POST",
-                                                  headers: { "Content-Type": "application/json" },
-                                                          body: JSON.stringify({ email, password }),
-                                                                });
+                                                                                  const wpUrl = process.env.WP_SITE_URL;
 
-                                                                      const data = await res.json();
+                                                                                      if (!wpUrl) {
+                                                                                            return NextResponse.json(
+                                                                                                    {
+                                                                                                              success: false,
+                                                                                                                        message: "WordPress site URL is not configured.",
+                                                                                                                                },
+                                                                                                                                        { status: 500 }
+                                                                                                                                              );
+                                                                                                                                                  }
 
-                                                                            if (!res.ok) {
-                                                                                    setError(data.message || "Login failed");
-                                                                                            return;
-                                                                                                  }
+                                                                                                                                                      const response = await fetch(
+                                                                                                                                                            `${wpUrl}/wp-json/gmc/v1/login`,
+                                                                                                                                                                  {
+                                                                                                                                                                          method: "POST",
+                                                                                                                                                                                  headers: {
+                                                                                                                                                                                            "Content-Type": "application/json",
+                                                                                                                                                                                                    },
+                                                                                                                                                                                                            body: JSON.stringify({
+                                                                                                                                                                                                                      username,
+                                                                                                                                                                                                                                password,
+                                                                                                                                                                                                                                        }),
+                                                                                                                                                                                                                                                cache: "no-store",
+                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                          );
 
-                                                                                                        if (data.verified) router.push("/dashboard");
-                                                                                                              else router.push("https://keniyahost.com/register-your-gym/");
-                                                                                                                  } catch {
-                                                                                                                        setError("Something went wrong");
-                                                                                                                            } finally {
-                                                                                                                                  setLoading(false);
-                                                                                                                                      }
-                                                                                                                                        };
+                                                                                                                                                                                                                                                              const data = await response.json();
 
-                                                                                                                                          return (
-                                                                                                                                              <form onSubmit={handleSubmit}>
-                                                                                                                                                    <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-                                                                                                                                                          <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-                                                                                                                                                                <button type="submit" disabled={loading}>
-                                                                                                                                                                        {loading ? "Logging in..." : "Login"}
-                                                                                                                                                                              </button>
-                                                                                                                                                                                    {error && <p>{error}</p>}
-                                                                                                                                                                                        </form>
-                                                                                                                                                                                          );
-                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                  return NextResponse.json(data, {
+                                                                                                                                                                                                                                                                        status: response.status,
+                                                                                                                                                                                                                                                                            });
+                                                                                                                                                                                                                                                                              } catch {
+                                                                                                                                                                                                                                                                                  return NextResponse.json(
+                                                                                                                                                                                                                                                                                        {
+                                                                                                                                                                                                                                                                                                success: false,
+                                                                                                                                                                                                                                                                                                        message: "Login request failed.",
+                                                                                                                                                                                                                                                                                                              },
+                                                                                                                                                                                                                                                                                                                    { status: 500 }
+                                                                                                                                                                                                                                                                                                                        );
+                                                                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                                                                          }
